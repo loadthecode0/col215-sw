@@ -1,1 +1,0 @@
-C:\IITD\third sem\COL215\SW\col215-sw\sw1\circuit.txt
