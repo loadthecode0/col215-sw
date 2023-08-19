@@ -7,20 +7,39 @@ class Node :
     def __init__(self) -> None:
         self.inputs = []
         self.outputs = []
-        self.inDelay = 0
-        self.outDelay = 0
-
+        self.inDelay = 0 #for part A
+        self.reqDelay = 0 #for Part B
+        
+class Gate :
+    def __init__(self, index, type, inputs, output) -> None:
+        self.gateIndex = index
+        self.gateType = type
+        self.gateDelay = 0
+        self.inputs = inputs #list of nodes giving input
+        self.output = output
+        
+    def calculateGateOutputDelay(self, circuit) -> int:
+        t = 0
+        for x in range(len(self.inputs)):
+            t = max(t, circuit.inputNode[self.input[x]])
+            
+    def displayGate(self):
+        print (self.gateIndex, self.gateType, self.gateDelay, self.inputs, self.output)
+    
 class Circuit:
     
     def __init__(self) -> None:
+        
+        self.gateCount = 0 
         self.intNodes = {}
         self.inputNodes = {}
         self.outputNodes = {}
         
         
-        self.gates= {} #dictionary for storing delays
-        self.gateInputNodes=[]
-        self.gateOutputNodes=[]
+        self.gates= [] #list containing all gate OBJECTS
+        self.gateTypeDict = {}
+        # self.gateInputNodes=[]
+        # self.gateOutputNodes=[]
         
     # def defineIntNode(self, data) :
     #     self.intNodes.insert(len(self.intNodes), data)
@@ -55,15 +74,55 @@ def readCircuitFile(circuit, filename) :
         elif (wordsInLine[0]=='INTERNAL_SIGNALS'):
             circuit.intNodes = dict.fromkeys(wordsInLine[1:], 0)
         else :
-            circuit.gates[wordsInLine[0]] = [0, wordsInLine[1:(len(wordsInLine)-1)], wordsInLine[len(wordsInLine)-1]]
+            circuit.gateCount += 1
+            index = circuit.gateCount
+            type = wordsInLine[0]
+            inputList = wordsInLine[1:(len(wordsInLine)-1)]
+            output = wordsInLine[len(wordsInLine)-1]
+            circuit.gates.append(Gate(index, type, inputList, output))
+            # circuit.gates[index-1].displayGate()    
+            try :
+                circuit.gateTypeDict[type].append(index)
+            except KeyError as error :
+                circuit.gateTypeDict[type] = []
+                circuit.gateTypeDict[type].append(index)
     print (circuit.inputNodes)
     print (circuit.outputNodes)
     print (circuit.intNodes)
-    print (circuit.gates)
+    print (circuit.gateCount)
+    print (circuit.gateTypeDict)
+    
+def readGateDelayFile (circuit, filename) :
+    
+    validLines = [] #storing valid input lines
+    Lines = filename.readlines() # stores each line of circuit file as a string in a list Lines
+    
+    for x in range(len(Lines)) :
+        currLine = Lines[x]
+        i = 0
+        while (currLine[i] == ' ') : #find first character after any spaces
+            i += 1
+        if ((currLine[i] != '/') and (currLine[i] != '\n')) :
+            validLines.insert(len(validLines), currLine) #checked, works
+            
+    for y in range(len(validLines)) :
+        wordsInLine = validLines[y].split() 
+        type = wordsInLine[0]
+        try:
+            delay = wordsInLine[1]
+            gateIndices = circuit.gateTypeDict[type]
+            for z in range(len(gateIndices)) :
+                gate = circuit.gates[gateIndices[z] - 1]
+                gate.gateDelay = delay
+                gate.displayGate()
+        except KeyError:
+            pass
+    
+    
             
 def writeOutputDelayFile(circuit, filename) :
-    for x in range(len(circuit.outputNodes)):
-        filename.write("Test \n")
+    for x in circuit.outputNodes:
+        filename.write(str(x) + " " + str(circuit.outputNodes[x]) + "\n" )
     
 # close all files at the end!
 
@@ -73,11 +132,11 @@ def main(): # checked, works
     
     #all input files
     circuitFile = open('circuit.txt', 'r')
-    delays = open("gate_delays.txt",'r') #universal : gate delay values for each gate
+    delayFile = open("gate_delays.txt",'r') #universal : gate delay values for each gate
     reqDelays = open("required_delays.txt", 'r') # input for part B
     
     #all output files
-    outputDelays = open("output_delays.txt","a") # output for part A
+    outputDelayFile = open("output_delays.txt","a") # output for part A
     inputDelays = open("input_delays.txt","a") # output for part B
     
     C = Circuit()
@@ -86,7 +145,8 @@ def main(): # checked, works
     # C.printInputNodes()
 
     readCircuitFile(C, circuitFile) #tested, works
-    writeOutputDelayFile(C, outputDelays)
+    readGateDelayFile (C, delayFile)
+    writeOutputDelayFile(C, outputDelayFile)
     
 if __name__ == "__main__":
     main()
