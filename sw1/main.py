@@ -1,3 +1,5 @@
+import sys
+
 #defining node, gate and circuit objects  ========================================================================
 class Node :
     def __init__(self, index, name, if_input, if_output) -> None:
@@ -20,7 +22,7 @@ class Gate :
         self.gateType = type
         self.gateDelay = 0 #delay at time of output
         self.inputs = inputs #list of nodes giving input
-        self.output = output #Node taking output
+        self.output = output #Node taking output (str)
             
     def displayGate(self):
         print (self.gateIndex, self.gateType, self.gateDelay, self.inputs, self.output)
@@ -222,9 +224,9 @@ def writeInputDelayFile(circuit, filename) :
 def main():
     
     #all input files
-    circuitFile = open('circuit.txt', 'r')
-    delayFile = open("gate_delays.txt",'r') #universal : gate delay values for each gate
-    reqDelays = open("required_delays.txt", 'r') # input for part B
+    circuitFile = open(sys.argv[2], 'r')
+    delayFile = open(sys.argv[3],'r') #universal : gate delay values for each gate
+    reqDelays = open(sys.argv[4], 'r') # input for part B
     
     #all output files
     outputDelayFile = open("output_delays.txt","a") # output for part A
@@ -236,12 +238,15 @@ def main():
     readCircuitFile(C, circuitFile) #tested, works
     readGateDelayFile (C, delayFile)
     readReqDelayFile (C, reqDelays)
-    calcA(C)
-    calcB(C)
-    C.displayCircuit()
-    writeOutputDelayFile(C, outputDelayFile)
-    writeInputDelayFile(C, inputDelays)
     
+    if sys.argv[1] == 'A' :
+        calcA(C)
+        writeOutputDelayFile(C, outputDelayFile)
+    elif sys.argv[1] == 'B':
+        calcB(C)
+        writeInputDelayFile(C, inputDelays)
+    
+    C.displayCircuit()
     circuitFile.close()
     delayFile.close()
     reqDelays.close()
