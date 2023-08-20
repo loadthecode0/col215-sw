@@ -63,7 +63,6 @@ class Circuit:
         for j in range(len(self.gates)) :
             self.gates[j].displayGate()
             
-
 #reading inputs and updating created objects ============================================================
 
 def readCircuitFile(circuit, filename) :
