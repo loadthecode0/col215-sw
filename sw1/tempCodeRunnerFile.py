@@ -1,2 +1,2 @@
-for y in range(len(validLines)) :
-    #     circuit.gates[]
+def __lt__(self, otherNode):
+    #     return self.yos < nxt.yos
