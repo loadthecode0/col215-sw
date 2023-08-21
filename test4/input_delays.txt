@@ -1,1 +1,1 @@
-Invalid test case
+Invalid set of required outputs

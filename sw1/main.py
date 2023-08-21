@@ -145,9 +145,13 @@ def calcDelayNode(circuit, node) -> float :#recursive function to calculate dela
     node.inDelay = maxDelay + float(gateDelay)
     return (node.inDelay)
         
-def calcA(circuit):
-    for outNode in circuit.outputNodesList :
-        calcDelayNode(circuit, outNode)
+def calcA(circuit, filename):
+    try:
+        for outNode in circuit.outputNodesList :
+            calcDelayNode(circuit, outNode)
+    except Exception as e:
+        filename.write(str(e) + '\n')
+        raise Exception from e
         
 #calculation for part B =======================================================================================
 def calcOutDelayNode(circuit, node) -> float :
@@ -170,7 +174,7 @@ def calcB(circuit, filename):
         for outNode in circuit.inputNodesList :
             calcOutDelayNode(circuit, outNode)
     except Exception as e:
-        filename.write('Invalid test case')
+        filename.write(str(e) + '\n')
         raise Exception from e
 
 #writing outputs==========================================================            
