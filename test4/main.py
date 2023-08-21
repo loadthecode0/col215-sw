@@ -170,7 +170,7 @@ def calcB(circuit, filename):
         for outNode in circuit.inputNodesList :
             calcOutDelayNode(circuit, outNode)
     except Exception as e:
-        filename.write('Invalid test case')
+        filename.write('Invalid test case\n')
         raise Exception from e
 
 #writing outputs==========================================================            

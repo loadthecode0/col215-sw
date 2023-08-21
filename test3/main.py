@@ -105,7 +105,8 @@ def readCircuitFile(circuit, filename) :
                 if(circuit.nodes[nodeName].is_output == False):
                     circuit.nodes[nodeName].outGates.append(index)
                 else :
-                    raise Exception('An output node cannot serve as input or internal signal')   
+                    raise Exception('Loop present in circuit: An output node cannot serve as input or internal signal')
+            # circuit.gates[index-1].displayGate()    
             try : # inserting each gate type into the dict (initialization)
                 circuit.gateTypeDict[gateType].append(index)
             except KeyError:
@@ -165,13 +166,9 @@ def calcOutDelayNode(circuit, node) -> float :
     node.reqDelay = reqDelay
     return (node.reqDelay)
         
-def calcB(circuit, filename):
-    try:
-        for outNode in circuit.inputNodesList :
-            calcOutDelayNode(circuit, outNode)
-    except Exception as e:
-        filename.write('Invalid test case')
-        raise Exception from e
+def calcB(circuit):
+    for outNode in circuit.inputNodesList :
+        calcOutDelayNode(circuit, outNode)
 
 #writing outputs==========================================================            
 def writeOutputDelayFile(circuit, filename):
@@ -203,12 +200,12 @@ def main():
 
     #all output files
     if sys.argv[1] == 'A' :
+        calcA(C)
         with open("output_delays.txt","a") as outputDelayFile:
-            calcA(C, outputDelayFile)
             writeOutputDelayFile(C, outputDelayFile) # output for part A
     elif sys.argv[1] == 'B':
+        calcB(C)
         with open("input_delays.txt","a") as inputDelays:
-            calcB(C, inputDelays)
             writeInputDelayFile(C, inputDelays)# output for part B
     
     C.displayCircuit()
