@@ -1,0 +1,62 @@
+class Node :
+    def __init__(self, index, name, if_input, if_output) -> None:
+        self.nodeIndex = index
+        self.nodeName = name #str
+        self.is_input = if_input
+        self.is_output = if_output
+        self.gate = 0 # gate outputting to this node
+        self.outGates = []
+        self.inputs = []  #list of nodes giving input to the gate associated with this node
+        self.inDelay = 0 #for part A
+        self.reqDelay = 0 #for Part B
+        
+    def displayNode(self):
+        print(self.nodeIndex, self.nodeName, self.is_input, self.is_output, self.inputs, self.gate, self.outGates, self.inDelay, self.reqDelay)
+        
+class Gate :
+    def __init__(self, index, type, inputs, output) -> None:
+        self.gateIndex = index
+        self.gateType = type #string
+        self.gateDelay = 0 #delay at time of output
+        self.inputs = inputs #list of nodes giving input to this gate
+        self.output = output #Node taking output (str)
+            
+    def displayGate(self):
+        print (self.gateIndex, self.gateType, self.gateDelay, self.inputs, self.output)
+    
+class Circuit:
+    
+    def __init__(self) -> None:
+        
+        self.gateCount = 0 
+        self.nodeCount = 0
+                
+        #dictionary of node objects, accessed by their names as keys
+        self.nodes = {}
+        
+        #lists of node objects
+        self.inputNodesList = [] 
+        self.outputNodesList = []
+        
+        #useful stuff, don't mess around with these
+        self.gates= [] #list containing all gate OBJECTS
+        self.gateTypeDict = {}
+        
+    def nodeInserter(self,arr, if_input, if_output) : #helper function
+        for z in range(len(arr)) :
+            self.nodeCount += 1
+            index = self.nodeCount
+            name = arr[z]
+            self.nodes[name] = Node(index, name, if_input, if_output)
+            if (if_input == True) :
+                self.nodes[name].gate = 0
+                self.inputNodesList.append(self.nodes[name])
+            elif (if_output == True) :
+                self.outputNodesList.append(self.nodes[name])
+            
+    def displayCircuit(self) :
+        print(self.nodeCount, self.gateCount)
+        for i in self.nodes:
+            self.nodes[i].displayNode()
+        for j in range(len(self.gates)) :
+            self.gates[j].displayGate()

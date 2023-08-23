@@ -32,7 +32,6 @@ class Gate :
 class Circuit:
     
     def __init__(self) -> None:
-        
         self.gateCount = 0 
         self.nodeCount = 0
                 
@@ -48,10 +47,9 @@ class Circuit:
         self.gateTypeDict = {}
         
     def nodeInserter(self,arr, if_input, if_output) : #helper function
-        for z in range(len(arr)) :
+        for name in arr :
             self.nodeCount += 1
             index = self.nodeCount
-            name = arr[z]
             self.nodes[name] = Node(index, name, if_input, if_output)
             if (if_input == True) :
                 self.nodes[name].gate = 0
@@ -166,7 +164,7 @@ def calcOutDelayNode(circuit, node) -> float :
         reqDelay = min(reqDelay, float(calcOutDelayNode(circuit, outNode)) - float(outputGateDelay))
         if (reqDelay < 0) :
             raise Exception('Invalid set of required outputs')
-    node.reqDelay = reqDelay
+    node.reqDelay = reqDelay # !=
     return (node.reqDelay)
         
 def calcB(circuit, filename):
