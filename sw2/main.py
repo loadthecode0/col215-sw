@@ -10,7 +10,7 @@ class Node :
         self.is_input = if_input
         self.is_output = if_output
         self.gate = 0 # gate outputting to this node
-        self.outGates = []
+        self.outGates = [] # gates to which output of this gate is going
         self.inputs = []  #list of nodes giving input to the gate associated with this node
         self.inDelay = 0 #for part A
         self.reqDelay = 0 #for Part B
@@ -22,12 +22,15 @@ class Gate :
     def __init__(self, index, type, inputs, output) -> None:
         self.gateIndex = index
         self.gateType = type #string
-        self.gateDelay = 0 #delay at time of output
+        self.gateDelay = [0, 0, 0] #delay at time of output
+        self.gateDelayMin = float('inf') #min possible delay at time of output
+        self.area = [0, 0, 0] #possible areas
+        self.usedImpl = 0 #for part 2
         self.inputs = inputs #list of nodes giving input to this gate
         self.output = output #Node taking output (str)
             
     def displayGate(self):
-        print (self.gateIndex, self.gateType, self.gateDelay, self.inputs, self.output)
+        print (self.gateIndex, self.gateType, self.gateDelay, self.gateDelayMin, self.area, self.inputs, self.output)
     
 class Circuit:
     
@@ -35,16 +38,16 @@ class Circuit:
         self.gateCount = 0 
         self.nodeCount = 0
                 
-        #dictionary of node objects, accessed by their names as keys
+        #dictionary of all node objects, accessed by their names as keys
         self.nodes = {}
         
-        #lists of node objects
+        #lists of input/output node objects
         self.inputNodesList = [] 
         self.outputNodesList = []
         
         #useful stuff, don't mess around with these
         self.gates= [] #list containing all gate OBJECTS
-        self.gateTypeDict = {}
+        self.gateTypeDict = {} #dictionary of all gate types and corresponding gate indices
         
     def nodeInserter(self,arr, if_input, if_output) : #helper function
         for name in arr :
@@ -74,24 +77,33 @@ def generateValidLinesList(filename) -> list:
         while (currLine[i] == ' ') : #find first character after any spaces
             i += 1
         if currLine[i] not in ['/', '\n'] : #then it is a valid line
-            validLines.insert(len(validLines), currLine) #checked, works
+            validLines.insert(len(validLines), currLine) #checked, works, basically push_back(currLine)
     return validLines
 
 def readCircuitFile(circuit, filename) :
     validLines = generateValidLinesList(filename)    
     for currLine in validLines :
         wordsInLine = currLine.split() #list of all words in current line
-        if (wordsInLine[0]=='PRIMARY_INPUTS' ):
+        if (wordsInLine[0]=='PRIMARY_INPUTS'):
             circuit.nodeInserter(wordsInLine[1:], True, False) #inserts all nodes in current line into the nodes List
         elif (wordsInLine[0]=='PRIMARY_OUTPUTS'):
             circuit.nodeInserter(wordsInLine[1:], False, True)
         elif (wordsInLine[0]=='INTERNAL_SIGNALS'):
             circuit.nodeInserter(wordsInLine[1:], False, False)
+        elif (wordsInLine[0]=='DFF'): #then the input and output ports of DFF must have already been included in above three conditions, change to input/output node as applicable
+            inDFF = wordsInLine[1]
+            outDFF = wordsInLine[2]
+            if ((circuit.nodes[inDFF] not in circuit.outputNodesList)) : #treat inDFF as output node
+                circuit.outputNodesList.append(circuit.nodes[inDFF])
+                circuit.nodes[inDFF].is_output = True
+            if ((circuit.nodes[outDFF] not in circuit.inputNodesList)) : #treat inDFF as input node
+                circuit.inputNodesList.append(circuit.nodes[outDFF])
+                circuit.nodes[outDFF].is_input = True
         else : #gates input now
             circuit.gateCount += 1
             index = circuit.gateCount
             gateType = wordsInLine[0]
-            inputList = wordsInLine[1:-1]
+            inputList = wordsInLine[1:-1] #all except last node are inputs to this particular gate
             output = wordsInLine[len(wordsInLine)-1] #node to which this gate outputs to
             circuit.gates.append(Gate(index, gateType, inputList, output))
             #assuming each internal or output node is associated as an output of a gate 
@@ -103,7 +115,7 @@ def readCircuitFile(circuit, filename) :
                 if(circuit.nodes[nodeName].is_output == False):
                     circuit.nodes[nodeName].outGates.append(index)
                 else :
-                    raise Exception('An output node cannot serve as input or internal signal')   
+                    raise Exception('An output node cannot serve as input or internal signal')  #RECTIFY THIS!  
             try : # inserting each gate type into the dict (initialization)
                 circuit.gateTypeDict[gateType].append(index)
             except KeyError:
@@ -113,30 +125,36 @@ def readGateDelayFile (circuit, filename) :
     validLines = generateValidLinesList(filename)    
     for currLine in validLines :
         wordsInLine = currLine.split()
-        gateType = wordsInLine[0]
+        gateType = wordsInLine[1]
         try:
-            delay = wordsInLine[1]
-            gateIndices = circuit.gateTypeDict[gateType]
+            implIndex = ord(wordsInLine[0][len(gateType) + 1]) - 48
+            delay = wordsInLine[2]
+            area = wordsInLine[3]
+            gateIndices = circuit.gateTypeDict[gateType] #fetches list of indices of gates of this type
             for index in gateIndices :
-                circuit.gates[index].gateDelay = delay
+                circuit.gates[index].gateDelay[implIndex - 1] = float(delay)
+                circuit.gates[index].gateDelayMin = min(circuit.gates[index].gateDelayMin, float(delay)) #min of old and currently read value
+                circuit.gates[index].area[implIndex - 1] = float(area)
         except KeyError:
-            print('Gate not present in circuit')
+            print(f'{gateType} Gate not present in circuit')
         
-def readReqDelayFile (circuit, filename) :
-    validLines = generateValidLinesList(filename)                
-    for currLine in validLines :
-        wordsInLine = currLine.split()
-        try:
-            circuit.nodes[wordsInLine[0]].reqDelay = wordsInLine[1]
-        except KeyError:
-            print('Node not present in circuit')
+# def readReqDelayFile (circuit, filename) :
+#     validLines = generateValidLinesList(filename)                
+#     for currLine in validLines :
+#         wordsInLine = currLine.split()
+#         try:
+#             circuit.nodes[wordsInLine[0]].reqDelay = wordsInLine[1]
+#         except KeyError:
+#             print('Node not present in circuit')
         
 #calculation for part A =====================================================================
 def calcDelayNode(circuit, node) -> float :#recursive function to calculate delays
     maxDelay = 0
-    gateDelay = circuit.gates[node.gate].gateDelay
+    gateDelay = circuit.gates[node.gate].gateDelayMin
     if(node.is_input == True):
         return 0
+    if(node.inDelay != 0): #has been calculated earlier, my DP measure
+        return node.inDelay
     for otherNodeName in node.inputs:
         otherNode = circuit.nodes[otherNodeName]
         maxDelay = max(maxDelay, calcDelayNode(circuit, otherNode))
@@ -152,36 +170,37 @@ def calcA(circuit, filename):
         raise Exception from e
         
 #calculation for part B =======================================================================================
-def calcOutDelayNode(circuit, node) -> float :
-    reqDelay = float('inf')
-    if(node.is_output == True):
-        return node.reqDelay
-    if(node.reqDelay != 0): #has been calculated earlier
-        return node.reqDelay
-    for outputGateNo in node.outGates:
-        outNode = circuit.nodes[circuit.gates[outputGateNo].output]
-        outputGateDelay = circuit.gates[outputGateNo].gateDelay
-        reqDelay = min(reqDelay, float(calcOutDelayNode(circuit, outNode)) - float(outputGateDelay))
-        if (reqDelay < 0) :
-            raise Exception('Invalid set of required outputs')
-    node.reqDelay = reqDelay # !=
-    return (node.reqDelay)
+# def calcOutDelayNode(circuit, node) -> float :
+#     reqDelay = float('inf')
+#     if(node.is_output == True):
+#         return node.reqDelay
+#     if(node.reqDelay != 0): #has been calculated earlier
+#         return node.reqDelay
+#     for outputGateNo in node.outGates:
+#         outNode = circuit.nodes[circuit.gates[outputGateNo].output]
+#         outputGateDelay = circuit.gates[outputGateNo].gateDelay
+#         reqDelay = min(reqDelay, float(calcOutDelayNode(circuit, outNode)) - float(outputGateDelay))
+#         if (reqDelay < 0) :
+#             raise Exception('Invalid set of required outputs')
+#     node.reqDelay = reqDelay # !=
+#     return (node.reqDelay)
         
-def calcB(circuit, filename):
-    try:
-        for outNode in circuit.inputNodesList :
-            calcOutDelayNode(circuit, outNode)
-    except Exception as e:
-        filename.write(str(e) + '\n')
-        raise Exception from e
+# def calcB(circuit, filename):
+#     try:
+#         for outNode in circuit.inputNodesList :
+#             calcOutDelayNode(circuit, outNode)
+#     except Exception as e:
+#         filename.write(str(e) + '\n')
+#         raise Exception from e
 
 #writing outputs==========================================================            
-def writeOutputDelayFile(circuit, filename):
+def writeLongestDelayFile(circuit, filename):
+    longestDelay = 0
     for x in circuit.outputNodesList: #x is an output node object
-        delay = x.inDelay
-        if (int(delay) == delay):
-            delay = int(delay)
-        filename.write(f"{str(x.nodeName)} {str(delay)}" + "\n")
+        longestDelay = max(longestDelay, x.inDelay)
+    if (int(longestDelay) == longestDelay):
+            longestDelay = int(longestDelay)
+    filename.write(str(longestDelay) + "\n")
         
 def writeInputDelayFile(circuit, filename) :
     for x in circuit.inputNodesList:
@@ -200,18 +219,18 @@ def main():
         readCircuitFile(C, circuitFile) #tested, works
     with open(sys.argv[3],'r') as delayFile: #universal : gate delay values for each gate
         readGateDelayFile (C, delayFile)
-    with open(sys.argv[4], 'r') as reqDelays: # input for part B
-        readReqDelayFile (C, reqDelays)
+    # with open(sys.argv[4], 'r') as longestDelay: # input for part B
+    #     readReqDelayFile (C, reqDelays)
 
     #all output files
     if sys.argv[1] == 'A' :
-        with open("output_delays.txt","a") as outputDelayFile:
-            calcA(C, outputDelayFile)
-            writeOutputDelayFile(C, outputDelayFile) # output for part A
-    elif sys.argv[1] == 'B':
-        with open("input_delays.txt","a") as inputDelays:
-            calcB(C, inputDelays)
-            writeInputDelayFile(C, inputDelays)# output for part B
+        with open("longest_delay.txt","a") as longestDelayFile:
+            calcA(C, longestDelayFile)
+            writeLongestDelayFile(C, longestDelayFile) # output for part A
+    # elif sys.argv[1] == 'B':
+    #     with open("input_delays.txt","a") as inputDelays:
+    #         calcB(C, inputDelays)
+    #         writeInputDelayFile(C, inputDelays)# output for part B
     
     C.displayCircuit()
     
