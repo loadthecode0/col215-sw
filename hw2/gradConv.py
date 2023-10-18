@@ -31,6 +31,7 @@ def main():
     img = Image.open('sample_test_image.png')
     inImgArray = np.asarray(img)
     print(inImgArray)
+    print(np.size(inImgArray))
     print(np.size(inImgArray, 0))
     print(np.size(inImgArray, 1))
     outImgArray = np.zeros([256,256])
