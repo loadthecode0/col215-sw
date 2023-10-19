@@ -12,11 +12,10 @@ class Node :
         self.gate = 0 # gate outputting to this node
         self.outGates = [] # gates to which output of this gate is going
         self.inputs = []  #list of nodes giving input to the gate associated with this node
-        self.inDelay = 0 #for part A
-        self.reqDelay = 0 #for Part B
+        self.inDelay = 0 #for DP
         
     def displayNode(self):
-        print(self.nodeIndex, self.nodeName, self.is_input, self.is_output, self.gate, self.inputs, self.gate, self.outGates, self.inDelay, self.reqDelay)
+        print(self.nodeIndex, self.nodeName, self.is_input, self.is_output, self.gate, self.inputs, self.gate, self.outGates, self.inDelay)
         
 class Gate :
     def __init__(self, index, type, inputs, output) -> None:
@@ -29,7 +28,7 @@ class Gate :
         self.output = output #Node taking output (str)
             
     def displayGate(self):
-        print (self.gateIndex, self.gateType, self.gateDelay, self.area, self.inputs, self.output)
+        print (self.gateIndex, self.gateType, self.gateDelay, self.area, self.inputs, self.output, self.usedImpl)
     
 class Circuit:
     
@@ -48,8 +47,7 @@ class Circuit:
         self.gates= [] #list containing all gate OBJECTS
         self.gateTypeDict = {} #dictionary of all gate types and corresponding gate indices
         
-        self.outputTrees = {} #contains all output trees accessed by corresponding output node
-        self.outputPathDelays = ()
+        # self.outputTrees = {} #contains all output trees accessed by corresponding output node
         
     def nodeInserter(self,arr, if_input, if_output) : #helper function
         for name in arr :
@@ -67,6 +65,12 @@ class Circuit:
             self.nodes[nodeName].inDelay = 0
         for gate in self.gates:
             gate.usedImpl = 0
+            
+    def resetCircuitMaxDelay(self):
+        for nodeName in self.nodes:
+            self.nodes[nodeName].inDelay = 0
+        for gate in self.gates:
+            gate.usedImpl = 2
     
     def displayCircuit(self) :
         print(self.nodeCount, self.gateCount)
@@ -120,10 +124,11 @@ def readCircuitFile(circuit, filename) :
             circuit.nodes[output].inputs = inputList
             #map each node inputting to this gate with the gate
             for nodeName in inputList:
-                if(circuit.nodes[nodeName].is_output == False):
-                    circuit.nodes[nodeName].outGates.append(index)
-                else :
-                    raise Exception('An output node cannot serve as input or internal signal')  #RECTIFY THIS!  
+                print(wordsInLine)
+                # if(circuit.nodes[nodeName].is_output == False):
+                circuit.nodes[nodeName].outGates.append(index)
+                # else :
+                    # raise Exception('An output node cannot serve as input or internal signal')  #RECTIFY THIS!  
             try : # inserting each gate type into the dict (initialization)
                 circuit.gateTypeDict[gateType].append(index)
             except KeyError:
@@ -150,19 +155,11 @@ def readGateDelayFile (circuit, filename) :
         gate.gateDelay.sort()
         gate.area.sort(reverse = True)
         
-# def readReqDelayFile (circuit, filename) :
-#     validLines = generateValidLinesList(filename)                
-#     for currLine in validLines :
-#         wordsInLine = currLine.split()
-#         try:
-#             circuit.nodes[wordsInLine[0]].reqDelay = wordsInLine[1]
-#         except KeyError:
-#             print('Node not present in circuit')
-        
 #calculation for part A =====================================================================
 def calcDelayNode(circuit, node) -> float :#recursive function to calculate delays
     maxDelay = 0
     gate = circuit.gates[node.gate]
+    
     gateDelay = gate.gateDelay[gate.usedImpl]
     if(node.is_input == True):
         return 0
@@ -175,58 +172,94 @@ def calcDelayNode(circuit, node) -> float :#recursive function to calculate dela
     return (node.inDelay)
         
 def calcLongestDelay(circuit, filename):
-    circuit.resetCircuit()
-    try:
-        for outNode in circuit.outputNodesList :
-            calcDelayNode(circuit, outNode)
-    except Exception as e:
-        filename.write(str(e) + '\n')
-        raise Exception from e
+    # try:
+    for outNode in circuit.outputNodesList :
+        calcDelayNode(circuit, outNode)
     longestDelay = 0
     for x in circuit.outputNodesList: #x is an output node object
         longestDelay = max(longestDelay, x.inDelay)
     return longestDelay
         
 #calculation for part B =======================================================================================
-def DFSUtil(gateNo, circuit):
+# def DFSUtil(gateNo, circuit, v):
         
-    print(gateNo, end=' ')
-    for nodeName in circuit.gates[gateNo].inputs:
-        if circuit.nodes[nodeName].is_input == False:
-            DFSUtil(circuit.nodes[nodeName].gate, circuit)
+#     # print(gateNo, end=' ')
+#     v.append(gateNo)
+#     for nodeName in circuit.gates[gateNo].inputs:
+#         if circuit.nodes[nodeName].is_input == False:
+#             DFSUtil(circuit.nodes[nodeName].gate, circuit, v)
 
-# The function to do DFS traversal. It uses
-# recursive DFSUtil()
-def constructOutputTrees(circuit):
+# # The function to do DFS traversal. It uses
+# # recursive DFSUtil()
+# def constructOutputTrees(circuit):
     
-    for outNode in circuit.outputNodesList :
-        DFSUtil(outNode.gate, circuit)
-        print("\n")
+#     for outNode in circuit.outputNodesList :
+#         circuit.outputTrees[outNode] = []
+#         DFSUtil(outNode.gate, circuit, circuit.outputTrees[outNode])
+#         # print("\n")
 
+#     for outNode in circuit.outputNodesList :
+#         print(circuit.outputTrees[outNode])
     
-    
-        
-# def calcB(circuit, filename):
-#     try:
-#         for outNode in circuit.inputNodesList :
-#             calcOutDelayNode(circuit, outNode)
-#     except Exception as e:
-#         filename.write(str(e) + '\n')
-#         raise Exception from e
+
+def solveB(circuit, filename, constraint):
+    circuit.resetCircuitMaxDelay()
+    longestDelay = calcLongestDelay(circuit, filename)
+    print("hello", longestDelay, constraint)
+    tempDelay = 0
+    tempGateNo = 1
+    gateList = circuit.gates
+    while (longestDelay > constraint):
+        tempDelay = 0
+        extraDelay = longestDelay - constraint #>0 to be here
+        shouldChange = True
+        for i in range(1, len(gateList)):
+            
+            gate = circuit.gates[i]
+            if (gate.usedImpl > 0) :
+                gateDiff = gate.gateDelay[gate.usedImpl] - gate.gateDelay[gate.usedImpl - 1]
+                if (gateDiff >= tempDelay and gateDiff <= extraDelay):
+                    # if (gateDiff = tempDelay) :
+                    #     if (gate.area[gate.usedImpl - 1])
+                    tempGateNo = i
+                    tempDelay = gateDiff  
+                    shouldChange = False
+        #now we reached end of one iteration over whole tree for this outNode
+        if (shouldChange == True):
+            print("entered")
+            dictDiffs = {}
+            for i in range(1, len(gateList) ):
+                gate = circuit.gates[i]
+                if (gate.usedImpl > 0):
+                    dictDiffs[i] = gate.gateDelay[gate.usedImpl] - gate.gateDelay[gate.usedImpl - 1]
+            temp = min(dictDiffs.values())
+            res = [key for key in dictDiffs if dictDiffs[key] == temp]
+            tempGateNo = res[0]
+            
+            
+        if (circuit.gates[tempGateNo].usedImpl > 0) :
+            circuit.gates[tempGateNo].usedImpl= circuit.gates[tempGateNo].usedImpl - 1
+        for nodeName in circuit.nodes:
+            circuit.nodes[nodeName].inDelay = 0
+        longestDelay = calcLongestDelay(circuit, filename)
+        circuit.displayCircuit()
+                    
+def calcArea(circuit) :
+    return sum(gate.area[gate.usedImpl] for gate in circuit.gates)
 
 #writing outputs==========================================================            
 def writeLongestDelayFile(circuit, filename):
+    circuit.resetCircuit()
     longestDelay = calcLongestDelay(circuit, filename)
     if (int(longestDelay) == longestDelay):
             longestDelay = int(longestDelay)
     filename.write(str(longestDelay) + "\n")
         
-def writeInputDelayFile(circuit, filename) :
-    for x in circuit.inputNodesList:
-        delay = x.reqDelay
-        if (int(delay) == delay):
-            delay = int(delay)
-        filename.write(f"{str(x.nodeName)} {str(delay)}" + "\n")
+def writeMinAreaFile(circuit, filename) :
+    area = calcArea(circuit)
+    if (int(area) == area):
+            area = int(area)
+    filename.write(str(area) + "\n")
 
 #main=======================================================================
 def main():  
@@ -243,15 +276,21 @@ def main():
 
     #all output files
     if sys.argv[1] == 'A' :
+        C.resetCircuit()
         with open("longest_delay.txt","a") as longestDelayFile:
             writeLongestDelayFile(C, longestDelayFile) # output for part A
-    # elif sys.argv[1] == 'B':
-    #     with open("input_delays.txt","a") as inputDelays:
-    #         calcB(C, inputDelays)
-    #         writeInputDelayFile(C, inputDelays)# output for part B
+    elif sys.argv[1] == 'B':
+        constraint = 0
+        with open("delay_constraint.txt","r") as delayConstraint:
+            Lines = delayConstraint.readlines()
+            constraint = float(Lines[0])
+            
+        with open("minimum_area.txt","a") as minArea:
+            solveB(C, minArea, constraint)
+            writeMinAreaFile(C, minArea)# output for part B
     
     C.displayCircuit()
-    constructOutputTrees(C)
+    C.resetCircuit()
     
 if __name__ == "__main__":
     main()

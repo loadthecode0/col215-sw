@@ -4,11 +4,16 @@
 // Ignore blank lines, lines with spaces only, and lines starting with "//"
 
 PRIMARY_INPUTS A B
-PRIMARY_OUTPUTS E F
-INTERNAL_SIGNALS C D G
-INV A C
-AND2 C B D
-DFF D G
-NAND2 C G E
-INV G F
+PRIMARY_OUTPUTS E
+INTERNAL_SIGNALS C P Q R S T O
+//DFF K S
+DFF O R
+INV A P
+INV P Q
+INV B S
+INV S T
+AND2 A S C
+NOR2 Q S O
+OR2 R T E
+
 
